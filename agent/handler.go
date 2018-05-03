@@ -15,9 +15,9 @@ type JSONRequest struct {
 
 // JSONResponse ...
 type JSONResponse struct {
-	Result map[string]interface{} `json:"result"`
-	Error  map[string]interface{} `json:"error"`
-	ID     interface{}            `json:"id"`
+	Result interface{} `json:"result"`
+	Error  interface{} `json:"error"`
+	ID     interface{} `json:"id"`
 }
 
 // APIFunc ...
@@ -45,8 +45,8 @@ func (h Handler) ServeHTTP(s http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	req := new(JSONRequest)
-	err := json.NewDecoder(r.Body).Decode(req)
+	req := JSONRequest{}
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		s.WriteHeader(400)
 		log.Printf("Bad request: %s", err)
@@ -61,7 +61,7 @@ func (h Handler) ServeHTTP(s http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	resp, aerr := api(req)
+	resp, aerr := api(&req)
 	if aerr != nil {
 		s.WriteHeader(500)
 		log.Printf("failed to handle API: %s", aerr)
@@ -79,7 +79,7 @@ func (h Handler) ServeHTTP(s http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("could not write response: %s", err)
 		return
-	}	
+	}
 }
 
 // RegisterAPI ...
