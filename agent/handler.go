@@ -46,7 +46,9 @@ func (h Handler) ServeHTTP(s http.ResponseWriter, r *http.Request) {
 		}
 	}
 	req := JSONRequest{}
-	err := json.NewDecoder(r.Body).Decode(&req)
+	dec := json.NewDecoder(r.Body)
+	dec.UseNumber()
+	err := dec.Decode(&req)
 	if err != nil {
 		s.WriteHeader(400)
 		log.Printf("Bad request: %s", err)
