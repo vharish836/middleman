@@ -2,14 +2,17 @@ package agent
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"net/http"
+	"strconv"
 )
 
 // Service ...
 type Service struct {
-	cfg *Config
-	h   *Handler
+	cfg    *Config
+	h      *Handler
+	aeskey []byte
 }
 
 // NewService ...
@@ -20,10 +23,17 @@ func NewService(cfg *Config) *Service {
 // Initialize ...
 func (s *Service) Initialize() (*Handler, error) {
 	s.h = NewHandler()
-	s.h.RegisterAPI("getinfo",s.GetInfo)
-	s.h.RegisterAPI("setruntimeparam", s.SetRuntimeParam)
 	s.h.RegisterWildCardAPI(s.PassThru)
+	s.h.RegisterAPI("publish", s.Publish)
+	s.h.RegisterAPI("publishgcm",s.PublishGCM)
+	s.h.RegisterAPI("getstreamitem", s.GetStreamItem)
+	s.h.RegisterAPI("getstreamitemgcm",s.GetStreamItemGCM)
 	s.h.RegisterValidator(s.CheckAuth)
+	s.aeskey = make([]byte, 32)
+	_, err := rand.Read(s.aeskey)
+	if err != nil {
+		return nil, err
+	}
 	return s.h, nil
 }
 
@@ -42,7 +52,8 @@ func (s *Service) PlatformAPI(req *JSONRequest) (*JSONResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	r, nerr := http.NewRequest("POST", "http://localhost:"+s.cfg.MultiChain.RPCPort+"/", bytes.NewBuffer(rbuf))
+	r, nerr := http.NewRequest("POST",
+		"http://localhost:"+strconv.Itoa(s.cfg.MultiChain.RPCPort)+"/", bytes.NewBuffer(rbuf))
 	if nerr != nil {
 		return nil, nerr
 	}
@@ -64,34 +75,4 @@ func (s *Service) PlatformAPI(req *JSONRequest) (*JSONResponse, error) {
 // PassThru ...
 func (s *Service) PassThru(req *JSONRequest) (*JSONResponse, error) {
 	return s.PlatformAPI(req)
-}
-
-// GetInfo ...
-func (s *Service) GetInfo(req *JSONRequest) (*JSONResponse,error) {
-	rsp,err := s.PlatformAPI(req)
-	if err != nil {
-		return nil,err
-	}
-	result,ok := rsp.Result.(map[string]interface{})
-	if ok != false {
-		result["InjectorVersion"] = 1
-	}
-	return rsp,err
-}
-
-// SetRuntimeParam ...
-func (s *Service) SetRuntimeParam(req *JSONRequest) (*JSONResponse, error) {
-	if len(req.Params) < 2 {
-		return &JSONResponse{Error: map[string]interface{}{"code": -1, "error": "Need exactly two arguments"}}, nil
-	}
-	param := req.Params[0].(string)
-	if param != "miningrequirespeers" {
-		return &JSONResponse{Error: map[string]interface{}{"code": -1, "error": "Only miningrequirespeers supported"}}, nil
-	}
-	value := req.Params[1].(string)
-	if value != "false" && value != "true" {
-		return &JSONResponse{Error: map[string]interface{}{"code": -1, "error": "Require bool value"}}, nil
-	}
-	rsp, err := s.PlatformAPI(req)
-	return rsp, err
 }

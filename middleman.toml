@@ -3,3 +3,4 @@ password="password"
 
 [multichain]
 chainname="chain1"
+rpcport=6296

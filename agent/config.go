@@ -13,7 +13,7 @@ import (
 // MultiChainConfig ...
 type MultiChainConfig struct {
 	ChainName   string
-	RPCPort     string
+	RPCPort     int
 	RPCUser     string
 	RPCPassword string
 }
@@ -60,9 +60,11 @@ func LoadSecondaryConfig(cfg *Config) (err error) {
 		if err != nil {
 			return err
 		}
-		cfg.MultiChain.RPCPort, err = c.RawStringDefault("rpcport")
-		if err != nil {
-			return err
+		if cfg.MultiChain.RPCPort == 0 {
+			cfg.MultiChain.RPCPort, err = c.Int("DEFAULT","rpcport")
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -104,16 +106,19 @@ func CheckConfig(c *Config) error {
 	if c.MultiChain.ChainName == "" {
 		return errors.New("Missing required parameter: chainname under multichain table")
 	}
-	if c.MultiChain.RPCPort == "" {
-		serr := fmt.Sprintf("Missing required parameter: rpcport in multichain.conf for chain %s", c.MultiChain.ChainName)
+	if c.MultiChain.RPCPort == 0 {
+		serr := fmt.Sprintf("Missing required parameter: rpcport in multichain.conf for chain %s",
+			c.MultiChain.ChainName)
 		return errors.New(serr)
 	}
 	if c.MultiChain.RPCUser == "" {
-		serr := fmt.Sprintf("Missing required parameter: rpcuser in multichain.conf for chain %s", c.MultiChain.ChainName)
+		serr := fmt.Sprintf("Missing required parameter: rpcuser in multichain.conf for chain %s",
+			c.MultiChain.ChainName)
 		return errors.New(serr)
 	}
 	if c.MultiChain.RPCPassword == "" {
-		serr := fmt.Sprintf("Missing required parameter: rpcpassword in multichain.conf for chain %s", c.MultiChain.ChainName)
+		serr := fmt.Sprintf("Missing required parameter: rpcpassword in multichain.conf for chain %s",
+			c.MultiChain.ChainName)
 		return errors.New(serr)
 	}
 	return nil
