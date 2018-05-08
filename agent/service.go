@@ -23,10 +23,8 @@ func NewService(cfg *Config) *Service {
 // Initialize ...
 func (s *Service) Initialize() (*Handler, error) {
 	s.h = NewHandler()
-	s.h.RegisterWildCardAPI(s.PassThru)
-	s.h.RegisterAPI("publish", s.Publish)	
-	s.h.RegisterAPI("getstreamitem", s.GetStreamItem)
 	s.h.RegisterValidator(s.CheckAuth)
+	s.RegisterAllAPI()
 	s.aeskey = make([]byte, 32)
 	_, err := rand.Read(s.aeskey)
 	if err != nil {
@@ -38,8 +36,11 @@ func (s *Service) Initialize() (*Handler, error) {
 // CheckAuth ...
 func (s *Service) CheckAuth(r *http.Request) int {
 	username, password, ok := r.BasicAuth()
-	if ok != true || username != s.cfg.UserName || password != s.cfg.PassWord {
+	if ok != true {
 		return 401
+	}
+	if username != s.cfg.UserName || password != s.cfg.PassWord {
+		return 403
 	}
 	return 200
 }
