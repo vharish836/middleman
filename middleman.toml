@@ -1,5 +1,6 @@
 username="username"
 password="password"
+aesmode=1 # 0 - GCM , 1 - CBC mode
 
 [multichain]
 chainname="chain1"

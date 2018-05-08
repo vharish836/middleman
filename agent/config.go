@@ -22,13 +22,19 @@ type MultiChainConfig struct {
 type Config struct {
 	UserName   string
 	PassWord   string
-	EasyAPI    bool
+	AESMode    int
 	MultiChain MultiChainConfig
 }
 
+// AESMOde ...
+const (
+	GCMMode = iota
+	CBCMode
+)
+
 // LoadPrimaryConfig ...
 func LoadPrimaryConfig(file string) (*Config, error) {
-	cfg := &Config{EasyAPI: true}
+	cfg := &Config{}
 	cfile, ferr := homedir.Expand(file)
 	if ferr != nil {
 		return nil, ferr

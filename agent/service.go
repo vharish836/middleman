@@ -24,10 +24,8 @@ func NewService(cfg *Config) *Service {
 func (s *Service) Initialize() (*Handler, error) {
 	s.h = NewHandler()
 	s.h.RegisterWildCardAPI(s.PassThru)
-	s.h.RegisterAPI("publish", s.Publish)
-	s.h.RegisterAPI("publishgcm",s.PublishGCM)
+	s.h.RegisterAPI("publish", s.Publish)	
 	s.h.RegisterAPI("getstreamitem", s.GetStreamItem)
-	s.h.RegisterAPI("getstreamitemgcm",s.GetStreamItemGCM)
 	s.h.RegisterValidator(s.CheckAuth)
 	s.aeskey = make([]byte, 32)
 	_, err := rand.Read(s.aeskey)
