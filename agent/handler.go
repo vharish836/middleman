@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sync"
 )
 
 // JSONRequest ...
@@ -26,15 +27,16 @@ type APIFunc func(*JSONRequest) (*JSONResponse, error)
 // ValidatorFunc ...
 type ValidatorFunc func(*http.Request) int
 
+var handlerMap sync.Map
+
 // Handler ...
-type Handler struct {
-	handlerMap map[string]APIFunc
+type Handler struct {	
 	validator  ValidatorFunc
 }
 
 // NewHandler ...
 func NewHandler() *Handler {
-	return &Handler{handlerMap: make(map[string]APIFunc)}
+	return &Handler{}
 }
 
 func (h Handler) ServeHTTP(s http.ResponseWriter, r *http.Request) {
@@ -54,16 +56,17 @@ func (h Handler) ServeHTTP(s http.ResponseWriter, r *http.Request) {
 		log.Printf("Bad request: %s", err)
 		return
 	}
-	api, ok := h.handlerMap[req.Method]
+	api, ok := handlerMap.Load(req.Method)
 	if ok == false {
-		api, ok = h.handlerMap["*"]
+		api, ok = handlerMap.Load("*")
 		if ok == false {
 			s.WriteHeader(400)
 			log.Printf("Method %s not registered", req.Method)
 			return
 		}
 	}
-	resp, aerr := api(&req)
+	method := api.(APIFunc)
+	resp, aerr := method(&req)
 	if aerr != nil {
 		s.WriteHeader(500)
 		log.Printf("failed to handle API: %s", aerr)
@@ -86,12 +89,12 @@ func (h Handler) ServeHTTP(s http.ResponseWriter, r *http.Request) {
 
 // RegisterAPI ...
 func (h *Handler) RegisterAPI(method string, api APIFunc) {
-	h.handlerMap[method] = api
+	handlerMap.Store(method,api)
 }
 
 // RegisterWildCardAPI ...
 func (h *Handler) RegisterWildCardAPI(api APIFunc) {
-	h.handlerMap["*"] = api
+	handlerMap.Store("*",api)
 }
 
 // RegisterValidator ...
