@@ -1,7 +1,15 @@
 username="username"
 password="password"
 aesmode=1 # 0 - GCM , 1 - CBC mode
+nativeentity="entity1"
+
+[[keys]]
+id="entity1"
+value="a15bc78675b379b8ca76927ad15e6c10f313931213ab70d49afa97233e05cd80"
+
+[[keys]]
+id="entity2"
+value="5d4440746f4460d94ffe0d41517c886b55143ebe2eca72673c30ae02bfe7d4cc"
 
 [multichain]
 chainname="chain1"
-rpcport=6296

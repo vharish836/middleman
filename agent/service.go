@@ -1,18 +1,21 @@
 package agent
 
 import (
+	"encoding/hex"
 	"bytes"
-	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
+	"sync"
 )
 
 // Service ...
 type Service struct {
-	cfg    *Config
-	h      *Handler
-	aeskey []byte
+	cfg        *Config
+	h          *Handler
+	entityKeys sync.Map
+	nativeKey  []byte
 }
 
 // NewService ...
@@ -20,13 +23,32 @@ func NewService(cfg *Config) *Service {
 	return &Service{cfg: cfg}
 }
 
+// LoadEntityMap ...
+func (s *Service) LoadEntityMap() error {
+	if s.cfg.Keys == nil {
+		return errors.New("no keys configured")
+	}
+	for i := range s.cfg.Keys {
+		key,err := hex.DecodeString(s.cfg.Keys[i].Value)
+		if err != nil {
+			return err
+		}
+		s.entityKeys.Store(s.cfg.Keys[i].ID, string(key))
+	}
+	nativekey, ok := s.entityKeys.Load(s.cfg.NativeEntity)
+	if ok != true {
+		return errors.New("native entity key not configured")
+	}
+	s.nativeKey = []byte(nativekey.(string))
+	return nil
+}
+
 // Initialize ...
 func (s *Service) Initialize() (*Handler, error) {
 	s.h = NewHandler()
 	s.h.RegisterValidator(s.CheckAuth)
 	s.RegisterAllAPI()
-	s.aeskey = make([]byte, 32)
-	_, err := rand.Read(s.aeskey)
+	err := s.LoadEntityMap()
 	if err != nil {
 		return nil, err
 	}

@@ -23,6 +23,8 @@ type Config struct {
 	UserName   string
 	PassWord   string
 	AESMode    int
+	NativeEntity string
+	Keys []KeyInfo
 	MultiChain MultiChainConfig
 }
 
@@ -31,6 +33,12 @@ const (
 	GCMMode = iota
 	CBCMode
 )
+
+// KeyInfo ...
+type KeyInfo struct {
+	ID string
+	Value string
+}
 
 // LoadPrimaryConfig ...
 func LoadPrimaryConfig(file string) (*Config, error) {
