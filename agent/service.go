@@ -43,6 +43,8 @@ func (s *Service) LoadEntityMap() error {
 	return nil
 }
 
+//go:generate go run gen.go
+
 // Initialize ...
 func (s *Service) Initialize() (*Handler, error) {
 	s.h = NewHandler()
