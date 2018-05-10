@@ -1,7 +1,5 @@
 package agent
 
-import ()
-
 //go:generate go run gen.go
 
 // RegisterAllAPI ...

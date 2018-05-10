@@ -6,6 +6,7 @@
 package main
 
 import (
+	"errors"
 	"time"
 	"fmt"
 	"text/template"
@@ -27,6 +28,16 @@ func(s *Service) RegisterGeneratedAPI() {
 }	
 `))
 
+var whitelist = map[string]bool {
+	"apis.go": true,
+	"config.go": true,
+	"encdec.go": true,
+	"gen.go": true,
+	"handler.go": true,
+	"register.go": true,
+	"service.go": true,
+}
+
 func main() {
 	apis := map[string]string{}
 	err := filepath.Walk("./", func(path string, info os.FileInfo, err error) error {
@@ -34,8 +45,15 @@ func main() {
 			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
 			return err
 		}
-		if strings.HasPrefix(info.Name(), "api_") != true {
+		if info.IsDir() {
 			return nil
+		}
+		if whitelist[info.Name()] {
+			return nil
+		}
+		if strings.HasPrefix(info.Name(), "api_") != true {
+			s := fmt.Sprintf("file \"%s\" not in whitelist present in gen.go, please add it.\n If it as an API, please add \"api[underscore]\" to the filename.\n", info.Name())
+			return errors.New(s) 
 		}
 		api := info.Name()[4:len(info.Name())-3]
 		apis[api] = "s." + strings.Title(api)
@@ -44,7 +62,7 @@ func main() {
 
 	if err != nil {
 		fmt.Printf("error walking the directory: %s", err)
-		return
+		os.Exit(1)
 	}
 
 	f,err := os.Create("apis.go")
