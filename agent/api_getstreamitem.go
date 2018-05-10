@@ -5,8 +5,8 @@ import (
 	"log"
 )
 
-// GetStreamItem ...
-func (s *Service) GetStreamItem(req *JSONRequest) (*JSONResponse, error) {
+// Getstreamitem ...
+func (s *Service) Getstreamitem(req *JSONRequest) (*JSONResponse, error) {
 	if len(req.Params) < 2 {
 		return &JSONResponse{Error: map[string]interface{}{
 			"code":  -1,
