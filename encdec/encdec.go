@@ -1,4 +1,4 @@
-package agent
+package encdec
 
 import (
 	"crypto/aes"
@@ -6,6 +6,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"log"
+)
+
+// CryptoMode ...
+const (
+	Aes256Gcm = iota
+	Aes256Cbc
 )
 
 // aesEncryptCBC ...
@@ -113,4 +119,24 @@ func aesDecryptGCM(ciphertext []byte, key []byte) (string, error) {
 		return "", err
 	}
 	return string(plaintext), nil
+}
+
+// EncryptData ...
+func EncryptData(plaindata []byte, key []byte, mode int) (cipherdata string, err error ) {
+	if mode == Aes256Gcm {
+		cipherdata, err = aesEncryptGCM(plaindata, key)
+	} else {
+		cipherdata, err = aesEncryptCBC(plaindata, key)
+	}
+	return cipherdata,err
+}
+
+// DecryptData ...
+func DecryptData(cipherdata []byte, key []byte, mode int) (plaindata string, err error) {
+	if mode == Aes256Gcm {
+		plaindata, err = aesDecryptGCM(cipherdata, key)
+	} else {
+		plaindata, err = aesDecryptCBC(cipherdata, key)
+	}
+	return plaindata,err
 }

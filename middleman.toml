@@ -1,6 +1,6 @@
 username="username"
 password="password"
-aesmode=1 # 0 - GCM , 1 - CBC mode
+cryptomode=1 # 0 - AES256-GCM , 1 - AES256-CBC
 nativeentity="entity1"
 
 [[keys]]

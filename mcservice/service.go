@@ -1,4 +1,4 @@
-package agent
+package mcservice
 
 import (
 	"encoding/hex"
@@ -8,18 +8,20 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"github.com/vharish836/middleman/config"
+	"github.com/vharish836/middleman/handler"
 )
 
 // Service ...
 type Service struct {
-	cfg        *Config
-	h          *Handler
+	cfg        *config.Config
+	h          *handler.Handler
 	entityKeys sync.Map
 	nativeKey  []byte
 }
 
 // NewService ...
-func NewService(cfg *Config) *Service {
+func NewService(cfg *config.Config) *Service {
 	return &Service{cfg: cfg}
 }
 
@@ -46,8 +48,8 @@ func (s *Service) LoadEntityMap() error {
 //go:generate go run gen.go
 
 // Initialize ...
-func (s *Service) Initialize() (*Handler, error) {
-	s.h = NewHandler()
+func (s *Service) Initialize() (*handler.Handler, error) {
+	s.h = handler.NewHandler()
 	s.h.RegisterValidator(s.CheckAuth)
 	s.RegisterAllAPI()
 	err := s.LoadEntityMap()
@@ -70,7 +72,7 @@ func (s *Service) CheckAuth(r *http.Request) int {
 }
 
 // PlatformAPI ...
-func (s *Service) PlatformAPI(req *JSONRequest) (*JSONResponse, error) {
+func (s *Service) PlatformAPI(req *handler.JSONRequest) (*handler.JSONResponse, error) {
 	rbuf, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -87,7 +89,7 @@ func (s *Service) PlatformAPI(req *JSONRequest) (*JSONResponse, error) {
 		return nil, derr
 	}
 	defer rsp.Body.Close()
-	resp := JSONResponse{}
+	resp := handler.JSONResponse{}
 	err = json.NewDecoder(rsp.Body).Decode(&resp)
 	if err != nil {
 		return nil, err
@@ -96,6 +98,6 @@ func (s *Service) PlatformAPI(req *JSONRequest) (*JSONResponse, error) {
 }
 
 // PassThru ...
-func (s *Service) PassThru(req *JSONRequest) (*JSONResponse, error) {
+func (s *Service) PassThru(req *handler.JSONRequest) (*handler.JSONResponse, error) {
 	return s.PlatformAPI(req)
 }

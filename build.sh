@@ -1,6 +1,6 @@
 #! /bin/bash
 
-cd agent
+cd mcservice
 go generate
 if (( $? )); then
     exit 1

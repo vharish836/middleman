@@ -1,4 +1,4 @@
-package agent
+package config
 
 import (
 	"errors"
@@ -20,28 +20,22 @@ type MultiChainConfig struct {
 
 // Config ...
 type Config struct {
-	UserName   string
-	PassWord   string
-	AESMode    int
+	UserName     string
+	PassWord     string
+	CryptoMode   int
 	NativeEntity string
-	Keys []KeyInfo
-	MultiChain MultiChainConfig
+	Keys         []KeyInfo
+	MultiChain   MultiChainConfig
 }
-
-// AESMOde ...
-const (
-	GCMMode = iota
-	CBCMode
-)
 
 // KeyInfo ...
 type KeyInfo struct {
-	ID string
+	ID    string
 	Value string
 }
 
-// LoadPrimaryConfig ...
-func LoadPrimaryConfig(file string) (*Config, error) {
+// loadPrimaryConfig ...
+func loadPrimaryConfig(file string) (*Config, error) {
 	cfg := &Config{}
 	cfile, ferr := homedir.Expand(file)
 	if ferr != nil {
@@ -54,8 +48,8 @@ func LoadPrimaryConfig(file string) (*Config, error) {
 	return cfg, nil
 }
 
-// LoadSecondaryConfig ...
-func LoadSecondaryConfig(cfg *Config) (err error) {
+// loadSecondaryConfig ...
+func loadSecondaryConfig(cfg *Config) (err error) {
 	if cfg.MultiChain.ChainName != "" {
 		mconffile := "~/.multichain/" + cfg.MultiChain.ChainName + "/multichain.conf"
 		mfile, ferr := homedir.Expand(mconffile)
@@ -75,7 +69,7 @@ func LoadSecondaryConfig(cfg *Config) (err error) {
 			return err
 		}
 		if cfg.MultiChain.RPCPort == 0 {
-			cfg.MultiChain.RPCPort, err = c.Int("DEFAULT","rpcport")
+			cfg.MultiChain.RPCPort, err = c.Int("DEFAULT", "rpcport")
 			if err != nil {
 				return err
 			}
@@ -84,30 +78,8 @@ func LoadSecondaryConfig(cfg *Config) (err error) {
 	return nil
 }
 
-// GetConfig ...
-func GetConfig(file string) (*Config, error) {
-	cfg, err := LoadPrimaryConfig(file)
-	if err != nil {
-		return nil, err
-	}
-	err = CheckConfig(cfg)
-	// this means all requierd parameters already present in primary config
-	if err == nil {
-		return cfg, nil
-	}
-	err = LoadSecondaryConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-	err = CheckConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return cfg, nil
-}
-
-// CheckConfig ...
-func CheckConfig(c *Config) error {
+// checkConfig ...
+func checkConfig(c *Config) error {
 	if c.UserName == "" {
 		return errors.New("Missing required parameter: username")
 	}
@@ -136,4 +108,26 @@ func CheckConfig(c *Config) error {
 		return errors.New(serr)
 	}
 	return nil
+}
+
+// GetConfig ...
+func GetConfig(file string) (*Config, error) {
+	cfg, err := loadPrimaryConfig(file)
+	if err != nil {
+		return nil, err
+	}
+	err = checkConfig(cfg)
+	// this means all requierd parameters already present in primary config
+	if err == nil {
+		return cfg, nil
+	}
+	err = loadSecondaryConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	err = checkConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }

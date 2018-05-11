@@ -5,19 +5,20 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/vharish836/middleman/agent"
+	"github.com/vharish836/middleman/config"
+	"github.com/vharish836/middleman/mcservice"
 )
 
 func main() {
-	f := flag.String("config", "middleman.toml", "Config file name")	
-	cfg, err := agent.GetConfig(*f)
+	f := flag.String("config", "middleman.toml", "Config file name")
+	cfg, err := config.GetConfig(*f)
 	if err != nil {
 		log.Fatalf("could not load config: %s", err)
 	}
-	s := agent.NewService(cfg)
-	h,herr := s.Initialize()
+	s := mcservice.NewService(cfg)
+	h, herr := s.Initialize()
 	if herr != nil {
-		log.Fatalf("could not initialize service: %s",herr)
+		log.Fatalf("could not initialize service: %s", herr)
 	}
 	http.Handle("/", h)
 	err = http.ListenAndServe("localhost:8383", nil)
