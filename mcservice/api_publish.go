@@ -10,48 +10,30 @@ import (
 // Publish ...
 func (s *Service) Publish(req *handler.JSONRequest) (*handler.JSONResponse, error) {
 	if len(req.Params) < 3 {
-		return &handler.JSONResponse{Error: map[string]interface{}{
-			"code":  -1,
-			"error": "Need exactly three arguments, refer to help",
-		}}, nil
+		return nil,errNumParameter
 	}
 	_, ok := req.Params[0].(string)
 	if ok != true {
-		return &handler.JSONResponse{Error: map[string]interface{}{
-			"code":  -1,
-			"error": "Invalid stream-identifier",
-		}}, nil
+		return nil,errParameter
 	}
-	entty, ok := req.Params[1].(string)
+	_, ok = req.Params[1].(string)
 	if ok != true {
-		return &handler.JSONResponse{Error: map[string]interface{}{
-			"code":  -1,
-			"error": "Invalid key",
-		}}, nil
+		return nil,errParameter
 	}
 	data, ok := req.Params[2].(string)
 	if ok != true {
-		return &handler.JSONResponse{Error: map[string]interface{}{
-			"code":  -1,
-			"error": "Invalid data",
-		}}, nil
+		return nil,errParameter
 	}
 	var key []byte
-	k, ok := s.entityKeys.Get(entty)
+	k, ok := s.entityKeys.Get(s.nativeEntity)
 	if ok != true {
-		return &handler.JSONResponse{Error: map[string]interface{}{
-			"code":  -1,
-			"error": "Invalid key",
-		}}, nil
+		return nil,errParameter
 	}
 	key = k.([]byte)
 	hexstr, err := encdec.EncryptData([]byte(data), key, s.cfg.Crypto.CryptoMode)
 	if err != nil {
 		log.Printf("could not encode: %s", err)
-		return &handler.JSONResponse{Error: map[string]interface{}{
-			"code":  -1,
-			"error": "Internal Server Error",
-		}}, nil
+		return nil,errInternal
 	}
 	req.Params[2] = hexstr
 	return s.platformAPI(req)

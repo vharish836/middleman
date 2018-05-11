@@ -34,6 +34,7 @@ var whitelist = map[string]bool {
 	"gen.go": true,
 	"register.go": true,
 	"service.go": true,
+	"errors.go": true,
 }
 
 func main() {

@@ -11,64 +11,43 @@ import (
 // Liststreamkeyitems ...
 func (s *Service) Liststreamkeyitems(req *handler.JSONRequest) (*handler.JSONResponse, error) {
 	if len(req.Params) < 2 {
-		return &handler.JSONResponse{Error: map[string]interface{}{
-			"code":  -1,
-			"error": "Need exactly three arguments, refer to help",
-		}}, nil
+		return nil,errNumParameter
 	}
 	_, ok := req.Params[0].(string)
 	if ok != true {
-		return &handler.JSONResponse{Error: map[string]interface{}{
-			"code":  -1,
-			"error": "Invalid stream-identifier",
-		}}, nil
+		return nil,errParameter
 	}
-	entty, ok := req.Params[1].(string)
+	_, ok = req.Params[1].(string)
 	if ok != true {
-		return &handler.JSONResponse{Error: map[string]interface{}{
-			"code":  -1,
-			"error": "Invalid key",
-		}}, nil
+		return nil,errParameter
 	}
-	k, ok := s.entityKeys.Get(entty)
+	k, ok := s.entityKeys.Get(s.nativeEntity)
 	if ok != true {
-		return &handler.JSONResponse{Error: map[string]interface{}{
-			"code":  -1,
-			"error": "Invalid key",
-		}}, nil
+		return nil,errParameter
 	}
 	key := k.([]byte)
 	rsp, err := s.platformAPI(req)
 	if rsp.Result != nil {
 		items, ok := rsp.Result.([]interface{})
 		if ok != true {
-			return &handler.JSONResponse{Error: map[string]interface{}{
-				"code":  -1,
-				"error": "Internal Server Error",
-			}}, nil
+			log.Printf("unexpected result: %+v",rsp.Result)
+			return nil,errInternal
 		}
 		for i := range items {
 			item, ok := items[i].(map[string]interface{})
 			if ok != true {
-				return &handler.JSONResponse{Error: map[string]interface{}{
-					"code":  -1,
-					"error": "Internal Server Error",
-				}}, nil
+				log.Printf("unexpected result: %+v",items[i])
+				return nil,errInternal
 			}
 			ciphertext, err := hex.DecodeString(item["data"].(string))
 			if err != nil {
 				log.Printf("could not decode hex: %s", err)
-				return &handler.JSONResponse{Error: map[string]interface{}{
-					"code":  -1,
-					"error": "Internal Server Error",
-				}}, nil
+				return nil,errInternal
 			}
 			plaintext, err := encdec.DecryptData(ciphertext, key, s.cfg.Crypto.CryptoMode)
 			if err != nil {
-				return &handler.JSONResponse{Error: map[string]interface{}{
-					"code":  -1,
-					"error": "Internal Server Error",
-				}}, nil
+				log.Printf("could not decrypt: %s",err)
+				return nil,errInternal
 			}
 			item["data"] = plaintext
 		}

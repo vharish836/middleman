@@ -30,8 +30,23 @@ type ValidatorFunc func(*http.Request) int
 var handlerMap sync.Map
 
 // Handler ...
-type Handler struct {	
-	validator  ValidatorFunc
+type Handler struct {
+	validator ValidatorFunc
+}
+
+func writeResponse(resp JSONResponse, s http.ResponseWriter) {
+	rbuf, err := json.Marshal(resp)
+	if err != nil {
+		s.WriteHeader(500)
+		log.Printf("could not encode response: %s", err)
+		return
+	}
+	s.Header().Set("Content-Type", "application/json")
+	_, err = s.Write(rbuf)
+	if err != nil {
+		log.Printf("could not write response: %s", err)
+	}
+	return
 }
 
 // NewHandler ...
@@ -68,33 +83,24 @@ func (h Handler) ServeHTTP(s http.ResponseWriter, r *http.Request) {
 	method := api.(APIFunc)
 	resp, aerr := method(&req)
 	if aerr != nil {
-		s.WriteHeader(500)
+		eresp := JSONResponse{Error: aerr.Error(), ID: req.ID}
+		writeResponse(eresp, s)
 		log.Printf("failed to handle API: %s", aerr)
 		return
 	}
 	resp.ID = req.ID
-	rbuf, eerr := json.Marshal(resp)
-	if eerr != nil {
-		s.WriteHeader(500)
-		log.Printf("could not encode response: %s", eerr)
-		return
-	}
-	s.Header().Set("Content-Type", "application/json")
-	_, err = s.Write(rbuf)
-	if err != nil {
-		log.Printf("could not write response: %s", err)
-		return
-	}
+	writeResponse(*resp, s)
+	return
 }
 
 // RegisterAPI ...
 func (h *Handler) RegisterAPI(method string, api APIFunc) {
-	handlerMap.Store(method,api)
+	handlerMap.Store(method, api)
 }
 
 // RegisterWildCardAPI ...
 func (h *Handler) RegisterWildCardAPI(api APIFunc) {
-	handlerMap.Store("*",api)
+	handlerMap.Store("*", api)
 }
 
 // RegisterValidator ...
