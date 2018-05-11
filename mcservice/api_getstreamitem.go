@@ -30,7 +30,7 @@ func (s *Service) Getstreamitem(req *handler.JSONRequest) (*handler.JSONResponse
 			"error": "Invalid tx-id",
 		}}, nil
 	}
-	rsp, err := s.PlatformAPI(req)
+	rsp, err := s.platformAPI(req)
 	if rsp.Result != nil {
 		rdata, ok := rsp.Result.(map[string]interface{})
 		if ok != true {
@@ -48,7 +48,15 @@ func (s *Service) Getstreamitem(req *handler.JSONRequest) (*handler.JSONResponse
 				"error": "Internal Server Error",
 			}}, nil
 		}
-		plaintext,err := encdec.DecryptData(ciphertext,s.nativeKey,s.cfg.CryptoMode)		
+		k, ok := s.entityKeys.Get(s.nativeEntity)
+		if ok != true {
+			return &handler.JSONResponse{Error: map[string]interface{}{
+				"code":  -1,
+				"error": "Internal Server Error",
+			}}, nil
+		}
+		key := k.([]byte)
+		plaintext, err := encdec.DecryptData(ciphertext, key, s.cfg.Crypto.CryptoMode)
 		if err != nil {
 			return &handler.JSONResponse{Error: map[string]interface{}{
 				"code":  -1,

@@ -14,6 +14,12 @@
   revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
 
 [[projects]]
+  name = "github.com/patrickmn/go-cache"
+  packages = ["."]
+  revision = "a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0"
+  version = "v2.1.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/robfig/config"
   packages = ["."]
@@ -22,6 +28,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d587c32a1b17a4d6a30bd9ec99f37084df5aac75a364b4e8348d63b411d9ecb0"
+  inputs-digest = "edabb379ee58882abcb5f3ad0ab6be6ba7c92138c9fac3c401c5bbf2e7e28bde"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -30,15 +30,15 @@ func (s *Service) Liststreamkeyitems(req *handler.JSONRequest) (*handler.JSONRes
 			"error": "Invalid key",
 		}}, nil
 	}
-	k, ok := s.entityKeys.Load(entty)
+	k, ok := s.entityKeys.Get(entty)
 	if ok != true {
 		return &handler.JSONResponse{Error: map[string]interface{}{
 			"code":  -1,
 			"error": "Invalid key",
 		}}, nil
 	}
-	key := []byte(k.(string))
-	rsp, err := s.PlatformAPI(req)
+	key := k.([]byte)
+	rsp, err := s.platformAPI(req)
 	if rsp.Result != nil {
 		items, ok := rsp.Result.([]interface{})
 		if ok != true {
@@ -63,7 +63,7 @@ func (s *Service) Liststreamkeyitems(req *handler.JSONRequest) (*handler.JSONRes
 					"error": "Internal Server Error",
 				}}, nil
 			}
-			plaintext,err := encdec.DecryptData(ciphertext,key,s.cfg.CryptoMode)			
+			plaintext, err := encdec.DecryptData(ciphertext, key, s.cfg.Crypto.CryptoMode)
 			if err != nil {
 				return &handler.JSONResponse{Error: map[string]interface{}{
 					"code":  -1,

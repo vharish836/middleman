@@ -18,20 +18,32 @@ type MultiChainConfig struct {
 	RPCPassword string
 }
 
-// Config ...
-type Config struct {
-	UserName     string
-	PassWord     string
-	CryptoMode   int
-	NativeEntity string
-	Keys         []KeyInfo
-	MultiChain   MultiChainConfig
-}
-
 // KeyInfo ...
 type KeyInfo struct {
-	ID    string
-	Value string
+	ID     string
+	Value  string
+	Native bool
+}
+
+// CryptoConfig ...
+type CryptoConfig struct {
+	CryptoMode int
+	Keys       []KeyInfo
+}
+
+// CacheConfig ...
+type CacheConfig struct {
+	TTL             string
+	CleanupInterval string
+}
+
+// Config ...
+type Config struct {
+	UserName   string
+	PassWord   string
+	Crypto     CryptoConfig
+	MultiChain MultiChainConfig
+	Cache      CacheConfig
 }
 
 // loadPrimaryConfig ...

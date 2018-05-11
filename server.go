@@ -15,12 +15,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not load config: %s", err)
 	}
-	s := mcservice.NewService(cfg)
-	h, herr := s.Initialize()
-	if herr != nil {
-		log.Fatalf("could not initialize service: %s", herr)
+	s,err := mcservice.NewService(cfg)
+	if err != nil {
+		log.Fatalf("could not initialize service: %s", err)
 	}
-	http.Handle("/", h)
+	http.Handle("/", s.GetHandler())
 	err = http.ListenAndServe("localhost:8383", nil)
 	if err != nil {
 		log.Fatalf("could not listen: %s", err)

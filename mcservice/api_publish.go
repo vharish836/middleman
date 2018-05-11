@@ -37,15 +37,15 @@ func (s *Service) Publish(req *handler.JSONRequest) (*handler.JSONResponse, erro
 		}}, nil
 	}
 	var key []byte
-	k, ok := s.entityKeys.Load(entty)
+	k, ok := s.entityKeys.Get(entty)
 	if ok != true {
 		return &handler.JSONResponse{Error: map[string]interface{}{
 			"code":  -1,
 			"error": "Invalid key",
 		}}, nil
 	}
-	key = []byte(k.(string))
-	hexstr,err := encdec.EncryptData([]byte(data),key,s.cfg.CryptoMode)
+	key = k.([]byte)
+	hexstr, err := encdec.EncryptData([]byte(data), key, s.cfg.Crypto.CryptoMode)
 	if err != nil {
 		log.Printf("could not encode: %s", err)
 		return &handler.JSONResponse{Error: map[string]interface{}{
@@ -54,5 +54,5 @@ func (s *Service) Publish(req *handler.JSONRequest) (*handler.JSONResponse, erro
 		}}, nil
 	}
 	req.Params[2] = hexstr
-	return s.PlatformAPI(req)
+	return s.platformAPI(req)
 }

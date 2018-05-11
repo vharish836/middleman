@@ -1,15 +1,21 @@
 username="username"
 password="password"
-cryptomode=1 # 0 - AES256-GCM , 1 - AES256-CBC
-nativeentity="entity1"
 
-[[keys]]
+[crypto]
+cryptomode=1 # 0 - AES256-GCM , 1 - AES256-CBC
+
+[[crypto.keys]]
 id="entity1"
 value="a15bc78675b379b8ca76927ad15e6c10f313931213ab70d49afa97233e05cd80"
+native=true
 
-[[keys]]
+[[crypto.keys]]
 id="entity2"
 value="5d4440746f4460d94ffe0d41517c886b55143ebe2eca72673c30ae02bfe7d4cc"
+
+[cache]
+ttl="30s"
+cleanupinterval="1m"
 
 [multichain]
 chainname="chain1"
