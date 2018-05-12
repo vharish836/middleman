@@ -1,119 +1,25 @@
 package mcservice
 
 import (
-	"bytes"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/vharish836/middleman/config"
-	"github.com/vharish836/middleman/handler"
+	"github.com/vharish836/middleman/context"
 )
 
-// Service ...
-type Service struct {
+//MCService ...
+type MCService struct {
 	cfg          *config.Config
-	h            *handler.Handler
 	entityKeys   *cache.Cache
 	nativeEntity string
 }
 
-func (s *Service) loadEntityMap() error {
-	if s.cfg.Crypto.Keys == nil {
-		return errors.New("no keys configured")
-	}
-	for i := range s.cfg.Crypto.Keys {
-		key, err := hex.DecodeString(s.cfg.Crypto.Keys[i].Value)
-		if err != nil {
-			return err
-		}
-		if s.cfg.Crypto.Keys[i].Native {
-			err = s.entityKeys.Add(s.cfg.Crypto.Keys[i].ID, key, cache.NoExpiration)
-			if err != nil {
-				return err
-			}
-			if s.nativeEntity == "" {
-				s.nativeEntity = s.cfg.Crypto.Keys[i].ID
-			} else {
-				return errors.New("only one key can be marked native")
-			}
-		} else {
-			s.entityKeys.SetDefault(s.cfg.Crypto.Keys[i].ID, key)
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-//go:generate go run gen.go
-
-func (s *Service) initialize() error {
-	s.h = handler.NewHandler()
-	s.h.RegisterValidator(s.CheckAuth)
-	s.RegisterAllAPI()
-	err := s.loadEntityMap()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *Service) platformAPI(req *handler.JSONRequest) (*handler.JSONResponse, error) {
-	rbuf, err := json.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-	r, nerr := http.NewRequest("POST",
-		"http://localhost:"+strconv.Itoa(s.cfg.MultiChain.RPCPort)+"/", bytes.NewBuffer(rbuf))
-	if nerr != nil {
-		return nil, nerr
-	}
-	r.SetBasicAuth(s.cfg.MultiChain.RPCUser, s.cfg.MultiChain.RPCPassword)
-	r.Header.Set("Content-Type", "application/json")
-	rsp, derr := http.DefaultClient.Do(r)
-	if derr != nil {
-		return nil, derr
-	}
-	defer rsp.Body.Close()
-	resp := handler.JSONResponse{}
-	err = json.NewDecoder(rsp.Body).Decode(&resp)
-	if err != nil {
-		return nil, err
-	}
-	return &resp, nil
-}
-
-// CheckAuth ...
-func (s *Service) CheckAuth(r *http.Request) int {
-	username, password, ok := r.BasicAuth()
-	if ok != true {
-		return 401
-	}
-	if username != s.cfg.UserName || password != s.cfg.PassWord {
-		return 403
-	}
-	return 200
-}
-
-// PassThru ...
-func (s *Service) PassThru(req *handler.JSONRequest) (*handler.JSONResponse, error) {
-	return s.platformAPI(req)
-}
-
-// GetHandler ...
-func (s *Service) GetHandler() *handler.Handler {
-	return s.h
-}
-
 // NewService ...
-func NewService(cfg *config.Config) (*Service, error) {
+func NewService(cfg *config.Config) (*MCService, error) {
 	d, err := time.ParseDuration(cfg.Cache.TTL)
 	if err != nil {
 		return nil, err
@@ -126,7 +32,7 @@ func NewService(cfg *config.Config) (*Service, error) {
 	ch.OnEvicted(func(k string, v interface{}) {
 		log.Printf("key: \"%s\" got evicted", k)
 	})
-	s := &Service{
+	s := MCService{
 		cfg:        cfg,
 		entityKeys: ch,
 	}
@@ -134,5 +40,61 @@ func NewService(cfg *config.Config) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	return s, nil
+	return &s, nil
+}
+
+// BuildAPIContext ...
+func (s MCService) BuildAPIContext(r *http.Request, w http.ResponseWriter) (context.Context, error) {
+	ret := s.checkAuth(r)
+	if ret != 200 {
+		w.WriteHeader(ret)
+		return nil, errInternal
+	}
+	req := JSONRequest{}
+	dec := json.NewDecoder(r.Body)
+	dec.UseNumber()
+	err := dec.Decode(&req)
+	if err != nil {
+		w.WriteHeader(400)
+		log.Printf("Bad request: %s", err)
+		return nil, err
+	}
+	ctx := context.NewContext()
+	ctx = context.WithValue(ctx, reqKey, &req)
+	return ctx, nil
+}
+
+// APIHandler ...
+func (s MCService) APIHandler(ctx context.Context) context.Context {
+	req := ctx.Value(reqKey).(*JSONRequest)
+	api, ok := apiMap.Load(req.Method)
+	if ok == false {
+		api, ok = apiMap.Load("*")
+	}
+	method := api.(apiFunc)
+	resp, err := method(req)
+	ctx = context.WithValue(ctx, errKey, err)
+	if err == nil {
+		ctx = context.WithValue(ctx, rspKey, resp)
+	}
+	return ctx
+}
+
+// WriteResponse ...
+func (s MCService) WriteResponse(ctx context.Context, w http.ResponseWriter) {
+	req := ctx.Value(reqKey).(*JSONRequest)
+	err := ctx.Value(errKey)
+	switch err.(type) {
+	case nil:
+		resp := ctx.Value(rspKey).(*JSONResponse)
+		resp.ID = req.ID
+		writeResponse(resp, w)
+	case error:
+		e := err.(error)
+		eresp := JSONResponse{Error: map[string]string{
+			"error": e.Error(),
+		}, ID: req.ID}
+		writeResponse(&eresp, w)
+		log.Printf("failed to handle API: %s", e)
+	}
 }

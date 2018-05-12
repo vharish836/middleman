@@ -14,8 +14,8 @@ id="entity2"
 value="5d4440746f4460d94ffe0d41517c886b55143ebe2eca72673c30ae02bfe7d4cc"
 
 [cache]
-ttl="30s"
-cleanupinterval="1m"
+ttl="30m"
+cleanupinterval="10m"
 
 [multichain]
 chainname="chain1"

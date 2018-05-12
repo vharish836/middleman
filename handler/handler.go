@@ -1,109 +1,43 @@
 package handler
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
-	"sync"
+
+	"github.com/vharish836/middleman/context"
 )
 
-// JSONRequest ...
-type JSONRequest struct {
-	Method string        `json:"method"`
-	Params []interface{} `json:"params"`
-	ID     interface{}   `json:"id"`
+// Service ....
+type Service interface {
+	// BuildAPIContext validates and extracts the data
+	// from request into returning Context. In case
+	// of error, proper status code is set using given writer
+	// and nil context is returned
+	BuildAPIContext(*http.Request, http.ResponseWriter) (context.Context, error)
+	// APIHanlder takes the built Context and processes
+	// the same. The response is built into the context
+	// In case of error, same is stored in the context
+	APIHandler(context.Context) context.Context
+	// WriteResponse builds the response from given context
+	// and sends using the given writer
+	WriteResponse(context.Context, http.ResponseWriter)	
 }
-
-// JSONResponse ...
-type JSONResponse struct {
-	Result interface{} `json:"result"`
-	Error  interface{} `json:"error"`
-	ID     interface{} `json:"id"`
-}
-
-// APIFunc ...
-type APIFunc func(*JSONRequest) (*JSONResponse, error)
-
-// ValidatorFunc ...
-type ValidatorFunc func(*http.Request) int
-
-var handlerMap sync.Map
 
 // Handler ...
 type Handler struct {
-	validator ValidatorFunc
-}
-
-func writeResponse(resp JSONResponse, s http.ResponseWriter) {
-	rbuf, err := json.Marshal(resp)
-	if err != nil {
-		s.WriteHeader(500)
-		log.Printf("could not encode response: %s", err)
-		return
-	}
-	s.Header().Set("Content-Type", "application/json")
-	_, err = s.Write(rbuf)
-	if err != nil {
-		log.Printf("could not write response: %s", err)
-	}
-	return
+	service Service
 }
 
 // NewHandler ...
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(s Service) *Handler {
+	return &Handler{s}
 }
 
 func (h Handler) ServeHTTP(s http.ResponseWriter, r *http.Request) {
-	if h.validator != nil {
-		ret := h.validator(r)
-		if ret != 200 {
-			s.WriteHeader(ret)
-			return
-		}
-	}
-	req := JSONRequest{}
-	dec := json.NewDecoder(r.Body)
-	dec.UseNumber()
-	err := dec.Decode(&req)
+	ctx, err := h.service.BuildAPIContext(r, s)
 	if err != nil {
-		s.WriteHeader(400)
-		log.Printf("Bad request: %s", err)
 		return
 	}
-	api, ok := handlerMap.Load(req.Method)
-	if ok == false {
-		api, ok = handlerMap.Load("*")
-		if ok == false {
-			s.WriteHeader(400)
-			log.Printf("Method %s not registered", req.Method)
-			return
-		}
-	}
-	method := api.(APIFunc)
-	resp, aerr := method(&req)
-	if aerr != nil {
-		eresp := JSONResponse{Error: aerr.Error(), ID: req.ID}
-		writeResponse(eresp, s)
-		log.Printf("failed to handle API: %s", aerr)
-		return
-	}
-	resp.ID = req.ID
-	writeResponse(*resp, s)
+	ctx = h.service.APIHandler(ctx)
+	h.service.WriteResponse(ctx,s)
 	return
-}
-
-// RegisterAPI ...
-func (h *Handler) RegisterAPI(method string, api APIFunc) {
-	handlerMap.Store(method, api)
-}
-
-// RegisterWildCardAPI ...
-func (h *Handler) RegisterWildCardAPI(api APIFunc) {
-	handlerMap.Store("*", api)
-}
-
-// RegisterValidator ...
-func (h *Handler) RegisterValidator(v ValidatorFunc) {
-	h.validator = v
 }

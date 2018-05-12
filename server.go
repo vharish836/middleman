@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/vharish836/middleman/handler"
 	"flag"
 	"log"
 	"net/http"
@@ -15,11 +16,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not load config: %s", err)
 	}
-	s,err := mcservice.NewService(cfg)
+	s, err := mcservice.NewService(cfg)	
 	if err != nil {
 		log.Fatalf("could not initialize service: %s", err)
 	}
-	http.Handle("/", s.GetHandler())
+	h := handler.NewHandler(s)
+	http.Handle("/", h)
 	err = http.ListenAndServe("localhost:8383", nil)
 	if err != nil {
 		log.Fatalf("could not listen: %s", err)

@@ -1,4 +1,4 @@
-package encdec
+package cipher
 
 import (
 	"crypto/aes"
