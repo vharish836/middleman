@@ -1,42 +1,38 @@
 package mcservice
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
-	"time"
-	"context"
 
-	"github.com/patrickmn/go-cache"
-	"github.com/vharish836/middleman/config"
+	"github.com/vharish836/middleman/boxer"
 )
+
+// Config ...
+type Config struct {
+	UserName     string
+	PassWord     string
+	ChainName    string
+	RPCPort      int
+	RPCUser      string
+	RPCPassword  string
+	NativeEntity string
+}
 
 //MCService ...
 type MCService struct {
-	cfg          *config.Config
-	entityKeys   *cache.Cache
-	nativeEntity string
+	cfg   *Config
+	boxer *boxer.Boxer
 }
 
 // NewService ...
-func NewService(cfg *config.Config) (*MCService, error) {
-	d, err := time.ParseDuration(cfg.Cache.TTL)
-	if err != nil {
-		return nil, err
-	}
-	c, err := time.ParseDuration(cfg.Cache.CleanupInterval)
-	if err != nil {
-		return nil, err
-	}
-	ch := cache.New(d, c)
-	ch.OnEvicted(func(k string, v interface{}) {
-		log.Printf("key: \"%s\" got evicted", k)
-	})
+func NewService(cfg *Config, b *boxer.Boxer) (*MCService, error) {
 	s := MCService{
-		cfg:        cfg,
-		entityKeys: ch,
+		cfg:   cfg,
+		boxer: b,
 	}
-	err = s.initialize()
+	err := s.initialize()
 	if err != nil {
 		return nil, err
 	}

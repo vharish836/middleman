@@ -2,15 +2,11 @@ package mcservice
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"strconv"
 	"sync"
-
-	cache "github.com/patrickmn/go-cache"
 )
 
 // JSONRequest ...
@@ -62,43 +58,10 @@ func (s *MCService) registerWildCardAPI(api apiFunc) {
 	apiMap.Store("*", api)
 }
 
-func (s *MCService) loadEntityMap() error {
-	if s.cfg.Crypto.Keys == nil {
-		return errors.New("no keys configured")
-	}
-	for i := range s.cfg.Crypto.Keys {
-		key, err := hex.DecodeString(s.cfg.Crypto.Keys[i].Value)
-		if err != nil {
-			return err
-		}
-		if s.cfg.Crypto.Keys[i].Native {
-			err = s.entityKeys.Add(s.cfg.Crypto.Keys[i].ID, key, cache.NoExpiration)
-			if err != nil {
-				return err
-			}
-			if s.nativeEntity == "" {
-				s.nativeEntity = s.cfg.Crypto.Keys[i].ID
-			} else {
-				return errors.New("only one key can be marked native")
-			}
-		} else {
-			s.entityKeys.SetDefault(s.cfg.Crypto.Keys[i].ID, key)
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 //go:generate go run gen.go
 
 func (s *MCService) initialize() error {
 	s.registerAllAPI()
-	err := s.loadEntityMap()
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -108,11 +71,11 @@ func (s *MCService) platformAPI(req *JSONRequest) (*JSONResponse, error) {
 		return nil, err
 	}
 	r, nerr := http.NewRequest("POST",
-		"http://localhost:"+strconv.Itoa(s.cfg.MultiChain.RPCPort)+"/", bytes.NewBuffer(rbuf))
+		"http://localhost:"+strconv.Itoa(s.cfg.RPCPort)+"/", bytes.NewBuffer(rbuf))
 	if nerr != nil {
 		return nil, nerr
 	}
-	r.SetBasicAuth(s.cfg.MultiChain.RPCUser, s.cfg.MultiChain.RPCPassword)
+	r.SetBasicAuth(s.cfg.RPCUser, s.cfg.RPCPassword)
 	r.Header.Set("Content-Type", "application/json")
 	rsp, derr := http.DefaultClient.Do(r)
 	if derr != nil {

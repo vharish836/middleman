@@ -2,8 +2,6 @@ package mcservice
 
 import (
 	"log"
-
-	"github.com/vharish836/middleman/cipher"
 )
 
 func (s *MCService) publish(req *JSONRequest) (*JSONResponse, error) {
@@ -22,13 +20,7 @@ func (s *MCService) publish(req *JSONRequest) (*JSONResponse, error) {
 	if ok != true {
 		return nil, errParameter
 	}
-	var key []byte
-	k, ok := s.entityKeys.Get(s.nativeEntity)
-	if ok != true {
-		return nil, errParameter
-	}
-	key = k.([]byte)
-	hexstr, err := cipher.EncryptData([]byte(data), key, s.cfg.Crypto.CryptoMode)
+	hexstr, err := s.boxer.Box([]byte(data), s.cfg.NativeEntity)
 	if err != nil {
 		log.Printf("could not encode: %s", err)
 		return nil, errInternal

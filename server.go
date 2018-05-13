@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/vharish836/middleman/boxer"
 	"github.com/vharish836/middleman/handler"
 	"flag"
 	"log"
@@ -16,7 +17,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not load config: %s", err)
 	}
-	s, err := mcservice.NewService(cfg)	
+	b,err := boxer.NewBoxer(&cfg.Boxer)
+	if err != nil {
+		log.Fatalf("could not initialize boxer: %s", err)
+	}
+	s, err := mcservice.NewService(&cfg.MultiChain, b)	
 	if err != nil {
 		log.Fatalf("could not initialize service: %s", err)
 	}

@@ -1,10 +1,7 @@
 package mcservice
 
 import (
-	"encoding/hex"
 	"log"
-
-	"github.com/vharish836/middleman/cipher"
 )
 
 func (s *MCService) liststreamkeyitems(req *JSONRequest) (*JSONResponse, error) {
@@ -19,11 +16,6 @@ func (s *MCService) liststreamkeyitems(req *JSONRequest) (*JSONResponse, error) 
 	if ok != true {
 		return nil, errParameter
 	}
-	k, ok := s.entityKeys.Get(s.nativeEntity)
-	if ok != true {
-		return nil, errParameter
-	}
-	key := k.([]byte)
 	rsp, err := s.platformAPI(req)
 	if rsp.Result != nil {
 		items, ok := rsp.Result.([]interface{})
@@ -37,12 +29,12 @@ func (s *MCService) liststreamkeyitems(req *JSONRequest) (*JSONResponse, error) 
 				log.Printf("unexpected result: %+v", items[i])
 				return nil, errInternal
 			}
-			ciphertext, err := hex.DecodeString(item["data"].(string))
+			data := item["data"].(string)
 			if err != nil {
 				log.Printf("could not decode hex: %s", err)
 				return nil, errInternal
 			}
-			plaintext, err := cipher.DecryptData(ciphertext, key, s.cfg.Crypto.CryptoMode)
+			plaintext, err := s.boxer.UnBox(data)
 			if err != nil {
 				log.Printf("could not decrypt: %s", err)
 				return nil, errInternal

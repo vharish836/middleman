@@ -1,49 +1,18 @@
 package config
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/BurntSushi/toml"
 	"github.com/robfig/config"
+	"github.com/vharish836/middleman/boxer"
+	"github.com/vharish836/middleman/mcservice"
 )
-
-// MultiChainConfig ...
-type MultiChainConfig struct {
-	ChainName   string
-	RPCPort     int
-	RPCUser     string
-	RPCPassword string
-}
-
-// KeyInfo ...
-type KeyInfo struct {
-	ID     string
-	Value  string
-	Native bool
-}
-
-// CryptoConfig ...
-type CryptoConfig struct {
-	CryptoMode int
-	Keys       []KeyInfo
-}
-
-// CacheConfig ...
-type CacheConfig struct {
-	TTL             string
-	CleanupInterval string
-}
 
 // Config ...
 type Config struct {
-	UserName   string
-	PassWord   string
-	Crypto     CryptoConfig
-	MultiChain MultiChainConfig
-	Cache      CacheConfig
+	Boxer      boxer.Config
+	MultiChain mcservice.Config
 }
 
 // loadPrimaryConfig ...
@@ -90,54 +59,13 @@ func loadSecondaryConfig(cfg *Config) (err error) {
 	return nil
 }
 
-// checkConfig ...
-func checkConfig(c *Config) error {
-	if c.UserName == "" {
-		return errors.New("Missing required parameter: username")
-	}
-	if c.PassWord == "" {
-		return errors.New("Missing required parameter: password")
-	}
-	if c.MultiChain == (MultiChainConfig{}) {
-		return errors.New("Missing required table: multichain")
-	}
-	if c.MultiChain.ChainName == "" {
-		return errors.New("Missing required parameter: chainname under multichain table")
-	}
-	if c.MultiChain.RPCPort == 0 {
-		serr := fmt.Sprintf("Missing required parameter: rpcport in multichain.conf for chain %s",
-			c.MultiChain.ChainName)
-		return errors.New(serr)
-	}
-	if c.MultiChain.RPCUser == "" {
-		serr := fmt.Sprintf("Missing required parameter: rpcuser in multichain.conf for chain %s",
-			c.MultiChain.ChainName)
-		return errors.New(serr)
-	}
-	if c.MultiChain.RPCPassword == "" {
-		serr := fmt.Sprintf("Missing required parameter: rpcpassword in multichain.conf for chain %s",
-			c.MultiChain.ChainName)
-		return errors.New(serr)
-	}
-	return nil
-}
-
 // GetConfig ...
 func GetConfig(file string) (*Config, error) {
 	cfg, err := loadPrimaryConfig(file)
 	if err != nil {
 		return nil, err
 	}
-	err = checkConfig(cfg)
-	// this means all requierd parameters already present in primary config
-	if err == nil {
-		return cfg, nil
-	}
 	err = loadSecondaryConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-	err = checkConfig(cfg)
 	if err != nil {
 		return nil, err
 	}

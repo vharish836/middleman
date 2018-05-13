@@ -4,7 +4,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/hex"
 	"log"
 )
 
@@ -15,14 +14,14 @@ const (
 )
 
 // aesEncryptCBC ...
-func aesEncryptCBC(plaindata []byte, key []byte) (hexstr string, err error) {
+func aesEncryptCBC(plaindata []byte, key []byte) (cipherdata []byte, iv []byte, err error) {
 	data := plaindata
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", err
+		return nil, nil, err
 	}
 	padlen := block.BlockSize() - (len(data) % block.BlockSize())
-	ciphertext := make([]byte, aes.BlockSize+padlen+len(data))
+	cipherdata = make([]byte, padlen+len(data))
 	// PKCS5 padding
 	if padlen == 0 {
 		padlen = aes.BlockSize
@@ -35,72 +34,67 @@ func aesEncryptCBC(plaindata []byte, key []byte) (hexstr string, err error) {
 		data = append(data, padding...)
 	}
 
-	iv := ciphertext[:aes.BlockSize]
+	iv = make([]byte, aes.BlockSize)
 	_, err = rand.Read(iv)
 	if err != nil {
-		return "", err
+		return nil, nil, err
 	}
 	mode := cipher.NewCBCEncrypter(block, iv)
-	mode.CryptBlocks(ciphertext[aes.BlockSize:], data)
-	hexstr = hex.EncodeToString(ciphertext)
-	return hexstr, nil
+	mode.CryptBlocks(cipherdata, data)
+	return cipherdata, iv, nil
 }
 
 // aesEncryptGCM ...
-func aesEncryptGCM(plaindata []byte, key []byte) (hexstr string, err error) {
+func aesEncryptGCM(plaindata []byte, key []byte) (cipherdata []byte, nonce []byte, err error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", err
+		return nil, nil, err
 	}
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
 		log.Printf("could not create GCM: %s", err)
-		return "", err
+		return nil, nil, err
 	}
-	nonce := make([]byte, aesgcm.NonceSize())
+	nonce = make([]byte, aesgcm.NonceSize())
 	_, err = rand.Read(nonce)
 	if err != nil {
 		log.Printf("could not init nounce: %s", err)
-		return "", err
+		return nil, nil, err
 	}
-	ciphertext := aesgcm.Seal(nil, nonce, plaindata, nil)
-	ciphertext = append(ciphertext, nonce...)
-	hexstr = hex.EncodeToString(ciphertext)
-	return hexstr, nil
+	cipherdata = aesgcm.Seal(nil, nonce, plaindata, nil)
+	return cipherdata, nonce, nil
 }
 
 // aesDecryptCBC ...
-func aesDecryptCBC(ciphertext []byte, key []byte) (plaintext string, err error) {
+func aesDecryptCBC(cipherdata []byte, iv []byte, key []byte) (plaintext string, err error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", err
 	}
-	if len(ciphertext) < aes.BlockSize {
+	if len(cipherdata) < aes.BlockSize {
 		log.Printf("data too short")
 		return "", err
 	}
-	iv := ciphertext[:aes.BlockSize]
-	ciphertext = ciphertext[aes.BlockSize:]
-	if len(ciphertext)%aes.BlockSize != 0 {
-		log.Printf("data of unexpected length: expected %d longer", len(ciphertext)%aes.BlockSize)
+	if len(cipherdata)%aes.BlockSize != 0 {
+		log.Printf("data of unexpected length: expected %d longer", len(cipherdata)%aes.BlockSize)
 		return "", err
 	}
 	mode := cipher.NewCBCDecrypter(block, iv)
-	mode.CryptBlocks(ciphertext, ciphertext)
+	mode.CryptBlocks(cipherdata, cipherdata)
 	// remove PKCS5 padding
-	padlen := int(ciphertext[len(ciphertext)-1])
-	padding := ciphertext[len(ciphertext)-padlen:]
+	padlen := int(cipherdata[len(cipherdata)-1])
+	padding := cipherdata[len(cipherdata)-padlen:]
 	for i := range padding {
 		if padding[i] != byte(padlen) {
 			log.Printf("unexpected padding")
 			return "", err
 		}
 	}
-	return string(ciphertext[:len(ciphertext)-padlen]), nil
+	return string(cipherdata[:len(cipherdata)-padlen]), nil
 }
 
 // aesDecryptGCM ...
-func aesDecryptGCM(ciphertext []byte, key []byte) (string, error) {
+func aesDecryptGCM(cipherdata []byte, nonce []byte, key []byte) (string, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		log.Printf("could not create block: %s", err)
@@ -111,9 +105,7 @@ func aesDecryptGCM(ciphertext []byte, key []byte) (string, error) {
 		log.Printf("could not create GCM: %s", err)
 		return "", err
 	}
-	nonce := ciphertext[len(ciphertext)-aesgcm.NonceSize():]
-	ciphertext = ciphertext[:len(ciphertext)-aesgcm.NonceSize()]
-	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
+	plaintext, err := aesgcm.Open(nil, nonce, cipherdata, nil)
 	if err != nil {
 		log.Printf("could not open: %s", err)
 		return "", err
@@ -122,21 +114,18 @@ func aesDecryptGCM(ciphertext []byte, key []byte) (string, error) {
 }
 
 // EncryptData ...
-func EncryptData(plaindata []byte, key []byte, mode int) (cipherdata string, err error ) {
+func EncryptData(plaindata []byte, key []byte, mode int) ([]byte, []byte, error) {
 	if mode == Aes256Gcm {
-		cipherdata, err = aesEncryptGCM(plaindata, key)
-	} else {
-		cipherdata, err = aesEncryptCBC(plaindata, key)
+		return aesEncryptGCM(plaindata, key)
 	}
-	return cipherdata,err
+	return aesEncryptCBC(plaindata, key)
+
 }
 
 // DecryptData ...
-func DecryptData(cipherdata []byte, key []byte, mode int) (plaindata string, err error) {
+func DecryptData(cipherdata []byte, key []byte, salt []byte, mode int) (string, error) {
 	if mode == Aes256Gcm {
-		plaindata, err = aesDecryptGCM(cipherdata, key)
-	} else {
-		plaindata, err = aesDecryptCBC(cipherdata, key)
-	}
-	return plaindata,err
+		return aesDecryptGCM(cipherdata, salt, key)
+	} 
+	return aesDecryptCBC(cipherdata, salt, key)	
 }
