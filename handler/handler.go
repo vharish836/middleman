@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"github.com/vharish836/middleman/context"
+	"context"
 )
 
 // Service ....
@@ -19,7 +19,7 @@ type Service interface {
 	APIHandler(context.Context) context.Context
 	// WriteResponse builds the response from given context
 	// and sends using the given writer
-	WriteResponse(context.Context, http.ResponseWriter)	
+	WriteResponse(context.Context, http.ResponseWriter)
 }
 
 // Handler ...
@@ -38,6 +38,6 @@ func (h Handler) ServeHTTP(s http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx = h.service.APIHandler(ctx)
-	h.service.WriteResponse(ctx,s)
+	h.service.WriteResponse(ctx, s)
 	return
 }

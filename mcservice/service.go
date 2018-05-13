@@ -5,10 +5,10 @@ import (
 	"log"
 	"net/http"
 	"time"
+	"context"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/vharish836/middleman/config"
-	"github.com/vharish836/middleman/context"
 )
 
 //MCService ...
@@ -59,7 +59,7 @@ func (s MCService) BuildAPIContext(r *http.Request, w http.ResponseWriter) (cont
 		log.Printf("Bad request: %s", err)
 		return nil, err
 	}
-	ctx := context.NewContext()
+	ctx := context.Background()
 	ctx = context.WithValue(ctx, reqKey, &req)
 	return ctx, nil
 }
