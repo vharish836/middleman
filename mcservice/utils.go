@@ -1,6 +1,7 @@
 package mcservice
 
 import (
+	"errors"
 	"bytes"
 	"encoding/json"
 	"log"
@@ -61,6 +62,10 @@ func (s *MCService) registerWildCardAPI(api apiFunc) {
 //go:generate go run gen.go
 
 func (s *MCService) initialize() error {
+	err := s.checkConfig()
+	if err != nil {
+		return err
+	}
 	s.registerAllAPI()
 	return nil
 }
@@ -82,6 +87,9 @@ func (s *MCService) platformAPI(req *JSONRequest) (*JSONResponse, error) {
 		return nil, derr
 	}
 	defer rsp.Body.Close()
+	if rsp.StatusCode != 200 {
+		return nil, errInternal
+	}
 	resp := JSONResponse{}
 	err = json.NewDecoder(rsp.Body).Decode(&resp)
 	if err != nil {
@@ -104,4 +112,38 @@ func (s *MCService) checkAuth(r *http.Request) int {
 
 func (s *MCService) passThru(req *JSONRequest) (*JSONResponse, error) {
 	return s.platformAPI(req)
+}
+
+var errInvalidConfig = errors.New("invalid config")
+
+func (s *MCService) checkConfig() error {
+	if s.cfg.UserName == "" {
+		log.Printf("username not configured")
+		return errInvalidConfig
+	}
+	if s.cfg.PassWord == "" {
+		log.Printf("password not configured")
+		return errInvalidConfig
+	}
+	if s.cfg.ChainName == "" {
+		log.Printf("chain name not configured")
+		return errInvalidConfig
+	}
+	if s.cfg.RPCUser == "" {
+		log.Printf("RPC username not configured")
+		return errInvalidConfig
+	}
+	if s.cfg.RPCPassword == "" {
+		log.Printf("RPC passwrod not configured")
+		return errInvalidConfig
+	}
+	if s.cfg.RPCPort == 0 {
+		log.Printf("RPC port not configured")
+		return errInvalidConfig
+	}
+	if s.cfg.NativeEntity == "" {
+		log.Printf("native entity not configured")
+		return errInvalidConfig
+	}
+	return nil
 }

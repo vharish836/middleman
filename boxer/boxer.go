@@ -3,31 +3,11 @@ package boxer
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"sync"
-	"time"
 
 	cache "github.com/patrickmn/go-cache"
 	"github.com/vharish836/middleman/cipher"
 )
-
-// HeaderVersion ...
-const (
-	HeaderVersion1 = 1
-)
-
-type headerV1 struct {
-	Algorithm int    `json:"algorithm"`
-	KeyID     string `json:"keyid"`
-	EntityID  string `json:"entityid"`
-	Salt      string `json:"salt"`
-}
-
-type boxV1 struct {
-	Version int      `json:"version"`
-	Header  headerV1 `json:"blockheader"`
-	Data    string   `json:"data"`
-}
 
 // KeyInfo ...
 type KeyInfo struct {
@@ -60,49 +40,6 @@ type Boxer struct {
 	cfg         *Config
 	entityCache *cache.Cache
 	defaultKeys sync.Map
-}
-
-var errNoKeys = errors.New("no keys configured")
-var errInvalidConfig = errors.New("invalid config")
-var errUnknownVersion = errors.New("unknown header version")
-
-func (b *Boxer) loadEntityMap() error {
-	t, err := time.ParseDuration(b.cfg.KeyCache.TTL)
-	if err != nil {
-		return errInvalidConfig
-	}
-	c, err := time.ParseDuration(b.cfg.KeyCache.CleanupInterval)
-	if err != nil {
-		return errInvalidConfig
-	}
-	if b.cfg.Crypto.Keys == nil {
-		return errNoKeys
-	}
-
-	keys := b.cfg.Crypto.Keys
-	for i := range keys {
-		entity := keys[i].Entity
-		keyID := keys[i].ID
-		keyValue, err := hex.DecodeString(keys[i].Value)
-		if err != nil {
-			return err
-		}
-		kc, ok := b.entityCache.Get(entity)
-		if ok != true {
-			kc = cache.New(t, c)
-			b.entityCache.SetDefault(entity, kc)
-		}
-		keyCache := kc.(*cache.Cache)
-		keyCache.SetDefault(keyID, string(keyValue))
-		if keys[i].Default {
-			if _, ok := b.defaultKeys.Load(entity); ok == true {
-				return errInvalidConfig
-			}
-			keys[i].Value = string(keyValue)
-			b.defaultKeys.Store(entity, keys[i])
-		}
-	}
-	return nil
 }
 
 // NewBoxer ...
